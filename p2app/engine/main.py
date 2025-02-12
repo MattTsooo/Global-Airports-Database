@@ -66,7 +66,7 @@ class Engine:
             if event.continent_code() and event.name():
                 self._cursor.execute('''SELECT *
                                      FROM continent
-                                     WHERE continent_code = :code and name = :name;''',
+                                     WHERE continent_code = :code AND name = :name;''',
                         {'code': event.continent_code(), 'name': event.name()})
             elif event.continent_code():
                 self._cursor.execute('''SELECT *
@@ -135,8 +135,8 @@ class Engine:
             if event.country_code() and event.name():
                 self._cursor.execute('''SELECT *
                                             FROM country
-                                            WHERE country_code = :cntry_code and name = :name;''',
-                                {'cntry_code': event.country_code(), 'name': event.name()})
+                                            WHERE country_code = :cntry_code AND name = :cntry_name;''',
+                                {'cntry_code': event.country_code(), 'cntry_name': event.name()})
 
             elif event.country_code():
                 self._cursor.execute('''SELECT *
@@ -147,8 +147,8 @@ class Engine:
             elif event.name():
                 self._cursor.execute('''SELECT *
                                             FROM country
-                                            WHERE name = :name''',
-                                     {'name': event.name()})
+                                            WHERE name = :cntry_name''',
+                                     {'cntry_name': event.name()})
 
             while True:
                 result = self._cursor.fetchone()
@@ -211,47 +211,34 @@ class Engine:
 
         #Region events
         if isinstance(event, StartRegionSearchEvent):
-            if event.region_code() and event.local_code() and event.name():
-                self._cursor.execute('''SELECT *
-                                            FROM country
-                                            WHERE country_code = :cntry_code and name = :name;''',
-                                     {'cntry_code': event.country_code(), 'name': event.name()})
-
-            elif event.region_code() and event.name():
-                self._cursor.execute('''SELECT *
-                                            FROM country
-                                            WHERE country_code = :code''',
-                                     {'code': event.country_code()})
-
-            elif event.region_code() and event.local_code():
-                self._cursor.execute('''SELECT *
-                                            FROM country
-                                            WHERE name = :name''',
-                                     {'name': event.name()})
-
-            elif event.local_code() and event.name():
-                pass
+            query_conditions = []
+            injection_params = {}
 
 
-            elif event.local_code():
-                pass
+            if event.local_code():
+                query_conditions.append('region_code = :rgn_code')
+                injection_params['rgn_code'] = event.region_code()
 
+            if event.name():
+                query_conditions.append('local_code = :lcl_code')
+                injection_params['lcl_code'] = event.local_code()
 
-            elif event.name():
-                pass
+            if event.region_code():
+                query_conditions.append('name = :rgn_name')
+                injection_params['rgn_name'] = event.name()
 
+            query = 'SELECT * FROM region'
+            if query_conditions:
+                query += ' WHERE ' + ' AND '.join(query_conditions)
 
-            elif event.region_code():
-                pass
-
-
+            self._cursor.execute(query, injection_params)
 
             while True:
                 result = self._cursor.fetchone()
                 if result is None:
                     break
-                yield CountrySearchResultEvent(Country(result[0], result[1], result[2], result[3],
-                                                       result[4], result[5]))
+                yield RegionSearchResultEvent(Region(result[0], result[1], result[2], result[3],
+                                                       result[4], result[5], result[6], result[7]))
 
         if isinstance(event, LoadRegionEvent):
             pass
