@@ -211,7 +211,47 @@ class Engine:
 
         #Region events
         if isinstance(event, StartRegionSearchEvent):
-            pass
+            if event.region_code() and event.local_code() and event.name():
+                self._cursor.execute('''SELECT *
+                                            FROM country
+                                            WHERE country_code = :cntry_code and name = :name;''',
+                                     {'cntry_code': event.country_code(), 'name': event.name()})
+
+            elif event.region_code() and event.name():
+                self._cursor.execute('''SELECT *
+                                            FROM country
+                                            WHERE country_code = :code''',
+                                     {'code': event.country_code()})
+
+            elif event.region_code() and event.local_code():
+                self._cursor.execute('''SELECT *
+                                            FROM country
+                                            WHERE name = :name''',
+                                     {'name': event.name()})
+
+            elif event.local_code() and event.name():
+                pass
+
+
+            elif event.local_code():
+                pass
+
+
+            elif event.name():
+                pass
+
+
+            elif event.region_code():
+                pass
+
+
+
+            while True:
+                result = self._cursor.fetchone()
+                if result is None:
+                    break
+                yield CountrySearchResultEvent(Country(result[0], result[1], result[2], result[3],
+                                                       result[4], result[5]))
 
         if isinstance(event, LoadRegionEvent):
             pass
