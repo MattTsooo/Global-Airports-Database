@@ -136,14 +136,14 @@ class Engine:
 
             elif event.country_code():
                 self._cursor.execute('''SELECT country_id, country_code, name, continent_id, wikipedia_link, keywords
-                                                            FROM country
-                                                            WHERE country_code = :code''',
+                                            FROM country
+                                            WHERE country_code = :code''',
                                      {'code': event.country_code()})
 
             elif event.name():
                 self._cursor.execute('''SELECT country_id, country_code, name, continent_id, wikipedia_link, keywords
-                                                            FROM country
-                                                            WHERE name = :name''',
+                                            FROM country
+                                            WHERE name = :name''',
                                      {'name': event.name()})
 
             while True:
@@ -156,10 +156,31 @@ class Engine:
 
 
         if isinstance(event, LoadCountryEvent):
-            pass
+            try:
+                self._cursor.execute('''SELECT country_id, country_code, name, continent_id, wikipedia_link, keywords
+                                            FROM country
+                                            WHERE country_id = :id;''',
+                                {'id': event.country_id()})
+
+                result = self._cursor.fetchone()
+                yield CountryLoadedEvent(Country(result[0], result[1], result[2], result[3],
+                                                       result[4], result[5]))
+            except sqlite3.Error:
+                yield ErrorEvent('FAILED TO LOAD CONTINENT')
+
 
         if isinstance(event, SaveNewCountryEvent):
-            pass
+            cntry_id, cntry_code, cntry_name, con_id, wiki_link, kywrds = event.country()
+            try:
+                self._cursor.execute('''INSERT INTO country (country_id, country_code, name, continent_id, wikipedia_link, keywords)
+                                            VALUES (:cntry_id, :cntry_code, :cntry_name, :con_id, :wiki_link, :kywrds);''',
+                                {'cntry_id': cntry_id, 'cntry_code': cntry_code, 'cntry_name': cntry_name, 'con_id': con_id, 'wiki_link': wiki_link, 'kywrds': kywrds})
+                self._connection.commit()
+                yield CountrySavedEvent(event.country())
+
+            except sqlite3.Error:
+                yield SaveCountryFailedEvent('FAILED TO SAVE NEW COUNTRY')
+
 
         if isinstance(event, SaveCountryEvent):
             pass
