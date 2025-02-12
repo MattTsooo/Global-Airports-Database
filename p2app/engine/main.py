@@ -62,3 +62,73 @@ class Engine:
 
 
 
+        #Continent events
+        if isinstance(event, StartContinentSearchEvent):
+            if event.continent_code() and event.name():
+                self._cursor.execute('''SELECT continent_code, name
+                                     FROM continent
+                                     WHERE continent_code == :code and name == :name;''',
+                                     {'code': event.continent_code(), 'name': event.name()})
+
+                while True:
+                    result = self._cursor.fetchone()
+                    if result is None:
+                        break
+                    yield ContinentSearchResultEvent((result[0], result[1], result[2]))
+
+
+        if isinstance(event, LoadContinentEvent):
+            if event.continent_id():
+                self._cursor.execute('''SELECT continent_id
+                                    FROM continent
+                                    WHERE continent_id == :id;''',
+                                     {'id': event.continent_id()})
+
+
+        if isinstance(event, SaveNewContinentEvent):
+            if event.continent():
+                pass
+
+
+        if isinstance(event, SaveContinentEvent):
+            pass
+
+
+
+        #Country events
+        if isinstance(event, StartCountrySearchEvent):
+            if event.country_code() and event.name():
+                self._cursor.execute('''SELECT country_code, name
+                                    FROM country
+                                    WHERE country_code == :code and name == :name''',
+                                     {'code': event.country_code(), 'name': event.name()})
+            while True:
+                result = self._cursor.fetchone()
+                if result is None:
+                    break
+                yield CountrySearchResultEvent((result[0], result[1], result[2]))
+
+
+
+        if isinstance(event, LoadCountryEvent):
+            pass
+
+        if isinstance(event, SaveNewCountryEvent):
+            pass
+
+        if isinstance(event, SaveCountryEvent):
+            pass
+
+
+        #Region events
+        if isinstance(event, StartRegionSearchEvent):
+            pass
+
+        if isinstance(event, LoadRegionEvent):
+            pass
+
+        if isinstance(event, SaveNewRegionEvent):
+            pass
+
+        if isinstance(event, SaveRegionEvent):
+            pass
