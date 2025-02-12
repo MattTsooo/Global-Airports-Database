@@ -11,11 +11,10 @@ import p2app.events
 from p2app.events.database import (OpenDatabaseEvent, DatabaseClosedEvent, CloseDatabaseEvent,
 DatabaseOpenedEvent, DatabaseOpenFailedEvent)
 
-from p2app.views.menus import FileMenu
-from p2app.views import *
+
 from p2app.events import *
-from pathlib import Path
 import sqlite3
+
 
 class Engine:
     """An object that represents the application's engine, whose main role is to
@@ -49,7 +48,7 @@ class Engine:
                 self._cursor.execute('PRAGMA foreign_keys = ON;')
                 yield DatabaseOpenedEvent(event.path())
             except sqlite3.DatabaseError:
-                yield DatabaseOpenFailedEvent('Database does not exist')
+                yield DatabaseOpenFailedEvent('DATABASE DOES NOT EXIST')
 
         if isinstance(event, CloseDatabaseEvent):
             self._cursor.close()
@@ -65,29 +64,52 @@ class Engine:
         #Continent events
         if isinstance(event, StartContinentSearchEvent):
             if event.continent_code() and event.name():
-                self._cursor.execute('''SELECT continent_code, name
+                self._cursor.execute('''SELECT continent_id, continent_code, name
                                      FROM continent
-                                     WHERE continent_code == :code and name == :name;''',
+                                     WHERE continent_code = :code and name = :name;''',
                                      {'code': event.continent_code(), 'name': event.name()})
+            elif event.continent_code():
+                self._cursor.execute('''SELECT continent_id, continent_code, name
+                                                     FROM continent
+                                                     WHERE continent_code = :code''',
+                                     {'code': event.continent_code()})
+            elif event.name():
+                self._cursor.execute('''SELECT continent_id, continent_code, name
+                                                                     FROM continent
+                                                                     WHERE name = :name;''',
+                                     {'name': event.name()})
 
                 while True:
                     result = self._cursor.fetchone()
                     if result is None:
                         break
-                    yield ContinentSearchResultEvent((result[0], result[1], result[2]))
+                    yield ContinentSearchResultEvent(Continent([0], result[1], result[2]))
 
 
         if isinstance(event, LoadContinentEvent):
-            if event.continent_id():
-                self._cursor.execute('''SELECT continent_id
+            try:
+                self._cursor.execute('''SELECT continent_id, continent_code, name
                                     FROM continent
-                                    WHERE continent_id == :id;''',
+                                    WHERE continent_id = :id;''',
                                      {'id': event.continent_id()})
+                result = self._cursor.fetchone()
+                yield ContinentLoadedEvent(Continent(result[0], result[1], result[2]))
+            except sqlite3.Error:
+                yield ErrorEvent('FAILED TO LOAD CONTINENT')
+
+
 
 
         if isinstance(event, SaveNewContinentEvent):
-            if event.continent():
-                pass
+            try:
+                self._cursor.execute('''INSERT INTO continent (continent_id, continent_code, name)
+                                    VALUES (:c_id, :c_code, :name);''',
+                                        {'c_id': event.continent()[0], 'c_code': event.continent()[1], 'name': event.continent()[2]})
+                self._connection.commit()
+                yield ContinentSavedEvent(event.continent())
+
+            except sqlite3.Error:
+                yield SaveContinentFailedEvent('FAILED TO SAVE CONTINENT')
 
 
         if isinstance(event, SaveContinentEvent):
@@ -100,7 +122,7 @@ class Engine:
             if event.country_code() and event.name():
                 self._cursor.execute('''SELECT country_code, name
                                     FROM country
-                                    WHERE country_code == :code and name == :name''',
+                                    WHERE country_code = :code and name = :name''',
                                      {'code': event.country_code(), 'name': event.name()})
             while True:
                 result = self._cursor.fetchone()
