@@ -64,17 +64,17 @@ class Engine:
         #Continent events
         if isinstance(event, StartContinentSearchEvent):
             if event.continent_code() and event.name():
-                self._cursor.execute('''SELECT continent_id, continent_code, name
+                self._cursor.execute('''SELECT *
                                      FROM continent
                                      WHERE continent_code = :code and name = :name;''',
                         {'code': event.continent_code(), 'name': event.name()})
             elif event.continent_code():
-                self._cursor.execute('''SELECT continent_id, continent_code, name
+                self._cursor.execute('''SELECT *
                                             FROM continent
                                             WHERE continent_code = :code''',
                                 {'code': event.continent_code()})
             elif event.name():
-                self._cursor.execute('''SELECT continent_id, continent_code, name
+                self._cursor.execute('''SELECT *
                                             FROM continent
                                             WHERE name = :name;''',
                                 {'name': event.name()})
@@ -88,7 +88,7 @@ class Engine:
 
         if isinstance(event, LoadContinentEvent):
             try:
-                self._cursor.execute('''SELECT continent_id, continent_code, name
+                self._cursor.execute('''SELECT *
                                             FROM continent
                                             WHERE continent_id = :id;''',
                                 {'id': event.continent_id()})
@@ -104,7 +104,7 @@ class Engine:
         if isinstance(event, SaveNewContinentEvent):
             try:
                 con_id, con_code, con_name = event.continent()
-                self._cursor.execute('''INSERT INTO continent (continent_id, continent_code, name)
+                self._cursor.execute('''INSERT INTO continent (country_id, country_code, name, continent_id, wikipedia_link, keywords)
                                             VALUES (:c_id, :c_code, :name);''',
                                 {'c_id': con_id, 'c_code': con_code, 'name': con_name})
                 self._connection.commit()
@@ -133,19 +133,19 @@ class Engine:
         #Country events
         if isinstance(event, StartCountrySearchEvent):
             if event.country_code() and event.name():
-                self._cursor.execute('''SELECT country_id, country_code, name, continent_id, wikipedia_link, keywords
+                self._cursor.execute('''SELECT *
                                             FROM country
                                             WHERE country_code = :cntry_code and name = :name;''',
                                 {'cntry_code': event.country_code(), 'name': event.name()})
 
             elif event.country_code():
-                self._cursor.execute('''SELECT country_id, country_code, name, continent_id, wikipedia_link, keywords
+                self._cursor.execute('''SELECT *
                                             FROM country
                                             WHERE country_code = :code''',
                                      {'code': event.country_code()})
 
             elif event.name():
-                self._cursor.execute('''SELECT country_id, country_code, name, continent_id, wikipedia_link, keywords
+                self._cursor.execute('''SELECT *
                                             FROM country
                                             WHERE name = :name''',
                                      {'name': event.name()})
@@ -161,7 +161,7 @@ class Engine:
 
         if isinstance(event, LoadCountryEvent):
             try:
-                self._cursor.execute('''SELECT country_id, country_code, name, continent_id, wikipedia_link, keywords
+                self._cursor.execute('''SELECT *
                                             FROM country
                                             WHERE country_id = :id;''',
                                 {'id': event.country_id()})
@@ -177,8 +177,8 @@ class Engine:
         if isinstance(event, SaveNewCountryEvent):
             try:
                 cntry_id, cntry_code, cntry_name, con_id, wiki_link, kywrds = event.country()
-                if kywrds == '':
-                    kywrds = None
+                kywrds = None if not kywrds or kywrds == '' else kywrds
+
                 self._cursor.execute('''INSERT INTO country (country_id, country_code, name, continent_id, wikipedia_link, keywords)
                                             VALUES (:cntry_id, :cntry_code, :cntry_name, :con_id, :wiki_link, :kywrds);''',
                                 {'cntry_id': cntry_id, 'cntry_code': cntry_code, 'cntry_name': cntry_name,
@@ -186,24 +186,24 @@ class Engine:
                 self._connection.commit()
                 yield CountrySavedEvent(event.country())
 
-            except sqlite3.Error:
+            except sqlite3.Error as e:
                 yield SaveCountryFailedEvent('FAILED TO SAVE NEW COUNTRY')
 
 
         if isinstance(event, SaveCountryEvent):
             try:
                 cntry_id, cntry_code, cntry_name, con_id, wiki_link, kywrds = event.country()
-                if kywrds == '':
-                    kywrds = None
+                kywrds = None if not kywrds or kywrds == '' else kywrds
+
                 self._cursor.execute('''UPDATE country
                                             SET country_id = :cntry_id, country_code = :cntry_code, name = :cntry_name, continent_id = :con_id, wikipedia_link = :wiki_link, keywords = :kywrds
-                                            WHERE country = :cntry_id;''',
+                                            WHERE country_id = :cntry_id;''',
                                 {'cntry_id': cntry_id, 'cntry_code': cntry_code, 'cntry_name': cntry_name,
                                             'con_id': con_id, 'wiki_link': wiki_link, 'kywrds': kywrds})
                 self._connection.commit()
                 yield SaveCountryEvent(event.country())
 
-            except sqlite3.Error:
+            except sqlite3.Error as e:
                 yield SaveCountryFailedEvent('FAILED TO SAVE COUNTRY')
 
 
