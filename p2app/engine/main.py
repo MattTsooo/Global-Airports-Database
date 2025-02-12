@@ -137,7 +137,10 @@ class Engine:
                                             FROM country
                                             WHERE country_code = :cntry_code AND name = :cntry_name;''',
                                 {'cntry_code': event.country_code(), 'cntry_name': event.name()})
-
+                print('''SELECT *
+                        FROM country
+                        WHERE country_code = :cntry_code AND name = :cntry_name;''',
+                    {'cntry_code': event.country_code(), 'cntry_name': event.name()})
             elif event.country_code():
                 self._cursor.execute('''SELECT *
                                             FROM country
@@ -215,15 +218,15 @@ class Engine:
             injection_params = {}
 
 
-            if event.local_code():
+            if event.region_code():
                 query_conditions.append('region_code = :rgn_code')
                 injection_params['rgn_code'] = event.region_code()
 
-            if event.name():
+            if event.local_code():
                 query_conditions.append('local_code = :lcl_code')
                 injection_params['lcl_code'] = event.local_code()
 
-            if event.region_code():
+            if event.name():
                 query_conditions.append('name = :rgn_name')
                 injection_params['rgn_name'] = event.name()
 
@@ -231,6 +234,7 @@ class Engine:
             if query_conditions:
                 query += ' WHERE ' + ' AND '.join(query_conditions)
 
+            print(query, injection_params)
             self._cursor.execute(query, injection_params)
 
             while True:
@@ -239,6 +243,7 @@ class Engine:
                     break
                 yield RegionSearchResultEvent(Region(result[0], result[1], result[2], result[3],
                                                        result[4], result[5], result[6], result[7]))
+
 
         if isinstance(event, LoadRegionEvent):
             pass

@@ -18,7 +18,7 @@ def main():
     main_view = MainView(event_bus)
 
     event_bus.register_engine(engine)
-    event_bus.enable_debug_mode()
+    #event_bus.enable_debug_mode()
     event_bus.register_view(main_view)
 
     main_view.run()
