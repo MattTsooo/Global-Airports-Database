@@ -170,8 +170,10 @@ class Engine:
 
 
         if isinstance(event, SaveNewCountryEvent):
-            cntry_id, cntry_code, cntry_name, con_id, wiki_link, kywrds = event.country()
             try:
+                cntry_id, cntry_code, cntry_name, con_id, wiki_link, kywrds = event.country()
+                if kywrds == '':
+                    kywrds = None
                 self._cursor.execute('''INSERT INTO country (country_id, country_code, name, continent_id, wikipedia_link, keywords)
                                             VALUES (:cntry_id, :cntry_code, :cntry_name, :con_id, :wiki_link, :kywrds);''',
                                 {'cntry_id': cntry_id, 'cntry_code': cntry_code, 'cntry_name': cntry_name, 'con_id': con_id, 'wiki_link': wiki_link, 'kywrds': kywrds})
