@@ -63,21 +63,22 @@ class Engine:
 
         #Continent events
         if isinstance(event, StartContinentSearchEvent):
-            if event.continent_code() and event.name():
-                self._cursor.execute('''SELECT *
-                                     FROM continent
-                                     WHERE continent_code = :code AND name = :name;''',
-                        {'code': event.continent_code(), 'name': event.name()})
-            elif event.continent_code():
-                self._cursor.execute('''SELECT *
-                                            FROM continent
-                                            WHERE continent_code = :code''',
-                                {'code': event.continent_code()})
-            elif event.name():
-                self._cursor.execute('''SELECT *
-                                            FROM continent
-                                            WHERE name = :name;''',
-                                {'name': event.name()})
+            query_conditions = []
+            injection_params = {}
+
+            if event.continent_code():
+                query_conditions.append('continent_code = :con_code')
+                injection_params['con_code'] = event.continent_code()
+
+            if event.name():
+                query_conditions.append('name = :con_name')
+                injection_params['con_name'] = event.name()
+
+            query = 'SELECT * FROM continent'
+            if query_conditions:
+                query += ' WHERE ' + ' AND '.join(query_conditions)
+
+            self._cursor.execute(query, injection_params)
 
             while True:
                 result = self._cursor.fetchone()
@@ -104,7 +105,7 @@ class Engine:
         if isinstance(event, SaveNewContinentEvent):
             try:
                 con_id, con_code, con_name = event.continent()
-                self._cursor.execute('''INSERT INTO continent (country_id, country_code, name, continent_id, wikipedia_link, keywords)
+                self._cursor.execute('''INSERT INTO continent (continent_id, continent_code, name)
                                             VALUES (:c_id, :c_code, :name);''',
                                 {'c_id': con_id, 'c_code': con_code, 'name': con_name})
                 self._connection.commit()
@@ -119,9 +120,9 @@ class Engine:
             try:
                 con_id, con_code, con_name = event.continent()
                 self._cursor.execute('''UPDATE continent
-                                        SET continent_id = :c_id, continent_code = :c_code, name = :name
-                                        WHERE continent = :c_id;''',
-                                        {'c_id': con_id, 'c_code': con_name, 'name': con_name})
+                                        SET continent_code = :c_code, name = :name
+                                        WHERE continent_id = :c_id;''',
+                            {'c_id': con_id, 'c_code': con_code, 'name': con_name})
                 self._connection.commit()
                 yield ContinentSavedEvent(event.continent())
 
@@ -132,26 +133,22 @@ class Engine:
 
         #Country events
         if isinstance(event, StartCountrySearchEvent):
-            if event.country_code() and event.name():
-                self._cursor.execute('''SELECT *
-                                            FROM country
-                                            WHERE country_code = :cntry_code AND name = :cntry_name;''',
-                                {'cntry_code': event.country_code(), 'cntry_name': event.name()})
-                print('''SELECT *
-                        FROM country
-                        WHERE country_code = :cntry_code AND name = :cntry_name;''',
-                    {'cntry_code': event.country_code(), 'cntry_name': event.name()})
-            elif event.country_code():
-                self._cursor.execute('''SELECT *
-                                            FROM country
-                                            WHERE country_code = :code''',
-                                     {'code': event.country_code()})
+            query_conditions = []
+            injection_params = {}
 
-            elif event.name():
-                self._cursor.execute('''SELECT *
-                                            FROM country
-                                            WHERE name = :cntry_name''',
-                                     {'cntry_name': event.name()})
+            if event.country_code():
+                query_conditions.append('country_code = cntry_code')
+                injection_params['cntry_code'] = event.country_code()
+
+            if event.name():
+                query_conditions.append('name = :cntry_name')
+                injection_params['cntry_name'] = event.name()
+
+            query = 'SELECT * FROM country'
+            if query_conditions:
+                query += ' WHERE ' + ' AND '.join(query_conditions)
+
+            self._cursor.execute(query, injection_params)
 
             while True:
                 result = self._cursor.fetchone()
@@ -189,7 +186,7 @@ class Engine:
                 self._connection.commit()
                 yield CountrySavedEvent(event.country())
 
-            except sqlite3.Error as e:
+            except sqlite3.Error:
                 yield SaveCountryFailedEvent('FAILED TO SAVE NEW COUNTRY')
 
 
@@ -199,14 +196,14 @@ class Engine:
                 kywrds = None if not kywrds or kywrds == '' else kywrds
 
                 self._cursor.execute('''UPDATE country
-                                            SET country_id = :cntry_id, country_code = :cntry_code, name = :cntry_name, continent_id = :con_id, wikipedia_link = :wiki_link, keywords = :kywrds
+                                            SET country_code = :cntry_code, name = :cntry_name, continent_id = :con_id, wikipedia_link = :wiki_link, keywords = :kywrds
                                             WHERE country_id = :cntry_id;''',
                                 {'cntry_id': cntry_id, 'cntry_code': cntry_code, 'cntry_name': cntry_name,
                                             'con_id': con_id, 'wiki_link': wiki_link, 'kywrds': kywrds})
                 self._connection.commit()
                 yield SaveCountryEvent(event.country())
 
-            except sqlite3.Error as e:
+            except sqlite3.Error:
                 yield SaveCountryFailedEvent('FAILED TO SAVE COUNTRY')
 
 
@@ -234,7 +231,6 @@ class Engine:
             if query_conditions:
                 query += ' WHERE ' + ' AND '.join(query_conditions)
 
-            print(query, injection_params)
             self._cursor.execute(query, injection_params)
 
             while True:
@@ -246,10 +242,48 @@ class Engine:
 
 
         if isinstance(event, LoadRegionEvent):
-            pass
+            try:
+                self._cursor.execute('''SELECT *
+                                            FROM country
+                                            WHERE region_id = :id;''',
+                                     {'id': event.region_id()})
+
+                result = self._cursor.fetchone()
+                yield RegionLoadedEvent(Region(result[0], result[1], result[2], result[3],
+                                                result[4], result[5], result[6], result[7]))
+            except sqlite3.Error:
+                yield ErrorEvent('FAILED TO LOAD REGION')
 
         if isinstance(event, SaveNewRegionEvent):
-            pass
+            try:
+                rgn_id, rgn_code, lcl_code, rgn_name, con_id, cntry_id, wiki_link, kywrds = event.region()
+                kywrds = None if not kywrds or kywrds == '' else kywrds
+                wiki_link = None if not wiki_link or wiki_link == '' else wiki_link
+
+                self._cursor.execute('''INSERT INTO region (region_id, region_code, local_code, name, continent_id, country_id, wikipedia_link, keywords)
+                                            VALUES (:region_id, :region_code, :local_code, :region_name, :continent_id, :country_id, :wikipedia_link, :keywords);''',
+                                     {'region_id': rgn_id, 'region_code': rgn_code, 'local_code': lcl_code,
+                                                'region_name': rgn_name, 'continent_id': con_id, 'wikipedia_link': wiki_link, 'keywords': kywrds})
+                self._connection.commit()
+                yield RegionSavedEvent(event.region())
+
+            except sqlite3.Error:
+                yield SaveRegionFailedEvent('FAILED TO SAVE NEW REGION')
 
         if isinstance(event, SaveRegionEvent):
-            pass
+            try:
+                rgn_id, rgn_code, lcl_code, rgn_name, con_id, cntry_id, wiki_link, kywrds = event.region()
+                kywrds = None if not kywrds or kywrds == '' else kywrds
+                wiki_link = None if not wiki_link or wiki_link == '' else wiki_link
+
+                self._cursor.execute('''UPDATE region
+                                            SET region_code = :rgn_code, local_code = :lcl_code, name = :rgn_name, 
+                                                continent_id = :con_id, country_id = :cntry_id, wikipedia_link = :wiki_link, keywords = :kywrds
+                                            WHERE region_id = :rgn_id;''',
+                                     {'rgn_id': rgn_id, 'rgn_code': rgn_code, 'lcl_code': lcl_code,
+                                                'rgn_name': rgn_name, 'con_id': con_id, 'cntry_id': cntry_id, 'wiki_link': wiki_link, 'kywrds': kywrds})
+                self._connection.commit()
+                yield RegionSavedEvent(event.region())
+
+            except sqlite3.Error:
+                yield SaveRegionFailedEvent('FAILED TO SAVE REGION')
