@@ -7,14 +7,15 @@
 #
 # This is the outermost layer of the part of the program that you'll need to build,
 # which means that YOU WILL DEFINITELY NEED TO MAKE CHANGES TO THIS FILE.
-import p2app.events
-from p2app.events.database import (OpenDatabaseEvent, DatabaseClosedEvent, CloseDatabaseEvent,
-DatabaseOpenedEvent, DatabaseOpenFailedEvent)
+
+
 
 
 from p2app.events import *
-import sqlite3
-
+from p2app.engine import database_handler as dh
+from p2app.engine import continent_handler as conh
+from p2app.engine import country_handler as ch
+from p2app.engine import region_handler as rh
 
 class Engine:
     """An object that represents the application's engine, whose main role is to
@@ -25,8 +26,10 @@ class Engine:
 
     def __init__(self):
         """Initializes the engine"""
-        self._connection = None
-        self._cursor = None
+        self._connection = dh.DatabaseHandler()
+        self._continent_handler = conh.ContinentHandler(self._connection)
+        self._country_handler = ch.CountryHandler(self._connection)
+        self._region_handler = rh.RegionHandler(self._connection)
 
 
 
@@ -41,254 +44,64 @@ class Engine:
 
         #Database events
         if isinstance(event, OpenDatabaseEvent):
-            try:
-                self._connection = sqlite3.connect(event.path())
-                self._cursor = self._connection.cursor()
-                self._cursor.execute('PRAGMA integrity_check')
-                self._cursor.execute('PRAGMA foreign_keys = ON;')
-                yield DatabaseOpenedEvent(event.path())
-            except sqlite3.DatabaseError:
-                yield DatabaseOpenFailedEvent('DATABASE DOES NOT EXIST')
+            yield from self._connection.open_database(event.path())
 
         if isinstance(event, CloseDatabaseEvent):
-            self._cursor.close()
-            self._cursor = None
-            self._connection = None
-            yield DatabaseClosedEvent()
+            yield from self._connection.close_database()
 
         if isinstance(event, QuitInitiatedEvent):
-            yield EndApplicationEvent
+            yield from EndApplicationEvent()
 
 
 
         #Continent events
         if isinstance(event, StartContinentSearchEvent):
-            query_conditions = []
-            injection_params = {}
-
-            if event.continent_code():
-                query_conditions.append('continent_code = :con_code')
-                injection_params['con_code'] = event.continent_code()
-
-            if event.name():
-                query_conditions.append('name = :con_name')
-                injection_params['con_name'] = event.name()
-
-            query = 'SELECT * FROM continent'
-            if query_conditions:
-                query += ' WHERE ' + ' AND '.join(query_conditions)
-
-            self._cursor.execute(query, injection_params)
-
-            while True:
-                result = self._cursor.fetchone()
-                if result is None:
-                    break
-                yield ContinentSearchResultEvent(Continent(result[0], result[1], result[2]))
+            yield from self._continent_handler.start_continent_search(event)
 
 
         if isinstance(event, LoadContinentEvent):
-            try:
-                self._cursor.execute('''SELECT *
-                                            FROM continent
-                                            WHERE continent_id = :id;''',
-                                {'id': event.continent_id()})
-
-                result = self._cursor.fetchone()
-                yield ContinentLoadedEvent(Continent(result[0], result[1], result[2]))
-            except sqlite3.Error:
-                yield ErrorEvent('FAILED TO LOAD CONTINENT')
-
-
+            yield from self._continent_handler.load_continent_event(event)
 
 
         if isinstance(event, SaveNewContinentEvent):
-            try:
-                con_id, con_code, con_name = event.continent()
-                self._cursor.execute('''INSERT INTO continent (continent_id, continent_code, name)
-                                            VALUES (:c_id, :c_code, :name);''',
-                                {'c_id': con_id, 'c_code': con_code, 'name': con_name})
-                self._connection.commit()
-                yield ContinentSavedEvent(event.continent())
-
-            except sqlite3.Error:
-                yield SaveContinentFailedEvent('FAILED TO SAVE NEW CONTINENT')
-
+            yield from self._continent_handler.save_new_continent_event(event)
 
 
         if isinstance(event, SaveContinentEvent):
-            try:
-                con_id, con_code, con_name = event.continent()
-                self._cursor.execute('''UPDATE continent
-                                        SET continent_code = :c_code, name = :name
-                                        WHERE continent_id = :c_id;''',
-                            {'c_id': con_id, 'c_code': con_code, 'name': con_name})
-                self._connection.commit()
-                yield ContinentSavedEvent(event.continent())
-
-            except sqlite3.Error:
-                yield SaveContinentFailedEvent('FAILED TO SAVE CONTINENT')
+            yield from self._continent_handler.save_continent_event(event)
 
 
 
         #Country events
         if isinstance(event, StartCountrySearchEvent):
-            query_conditions = []
-            injection_params = {}
-
-            if event.country_code():
-                query_conditions.append('country_code = :cntry_code')
-                injection_params['cntry_code'] = event.country_code()
-
-            if event.name():
-                query_conditions.append('name = :cntry_name')
-                injection_params['cntry_name'] = event.name()
-
-            query = 'SELECT * FROM country'
-            if query_conditions:
-                query += ' WHERE ' + ' AND '.join(query_conditions)
-
-            self._cursor.execute(query, injection_params)
-
-            while True:
-                result = self._cursor.fetchone()
-                if result is None:
-                    break
-                yield CountrySearchResultEvent(Country(result[0], result[1], result[2], result[3],
-                                                       result[4], result[5]))
-
+            yield from self._country_handler.start_country_search_event(event)
 
 
         if isinstance(event, LoadCountryEvent):
-            try:
-                self._cursor.execute('''SELECT *
-                                            FROM country
-                                            WHERE country_id = :id;''',
-                                {'id': event.country_id()})
-
-                result = self._cursor.fetchone()
-                yield CountryLoadedEvent(Country(result[0], result[1], result[2], result[3],
-                                                result[4], result[5]))
-            except sqlite3.Error:
-                yield ErrorEvent('FAILED TO LOAD CONTINENT')
-
+            yield from self._country_handler.load_country_event(event)
 
 
         if isinstance(event, SaveNewCountryEvent):
-            try:
-                cntry_id, cntry_code, cntry_name, con_id, wiki_link, kywrds = event.country()
-                kywrds = None if not kywrds or kywrds == '' else kywrds
-
-                self._cursor.execute('''INSERT INTO country (country_id, country_code, name, continent_id, wikipedia_link, keywords)
-                                            VALUES (:cntry_id, :cntry_code, :cntry_name, :con_id, :wiki_link, :kywrds);''',
-                                {'cntry_id': cntry_id, 'cntry_code': cntry_code, 'cntry_name': cntry_name,
-                                            'con_id': con_id, 'wiki_link': wiki_link, 'kywrds': kywrds})
-                self._connection.commit()
-                country = Country(cntry_id, cntry_code, cntry_name, con_id, wiki_link, kywrds)
-                yield CountrySavedEvent(country)
-
-            except sqlite3.Error as e:
-                yield SaveCountryFailedEvent('FAILED TO SAVE NEW COUNTRY')
+            yield from self._country_handler.save_new_country_event(event)
 
 
         if isinstance(event, SaveCountryEvent):
-            try:
-                cntry_id, cntry_code, cntry_name, con_id, wiki_link, kywrds = event.country()
-                kywrds = None if not kywrds or kywrds == '' else kywrds
-
-                self._cursor.execute('''UPDATE country
-                                            SET country_code = :cntry_code, name = :cntry_name, continent_id = :con_id, wikipedia_link = :wiki_link, keywords = :kywrds
-                                            WHERE country_id = :cntry_id;''',
-                                {'cntry_id': cntry_id, 'cntry_code': cntry_code, 'cntry_name': cntry_name,
-                                            'con_id': con_id, 'wiki_link': wiki_link, 'kywrds': kywrds})
-                self._connection.commit()
-                country = Country(cntry_id, cntry_code, cntry_name, con_id, wiki_link, kywrds)
-                yield SaveCountryEvent(country)
-
-            except sqlite3.Error:
-                yield SaveCountryFailedEvent('FAILED TO SAVE COUNTRY')
-
+            yield from self._country_handler.save_country_event(event)
 
 
 
         #Region events
         if isinstance(event, StartRegionSearchEvent):
-            query_conditions = []
-            injection_params = {}
-
-
-            if event.region_code():
-                query_conditions.append('region_code = :rgn_code')
-                injection_params['rgn_code'] = event.region_code()
-
-            if event.local_code():
-                query_conditions.append('local_code = :lcl_code')
-                injection_params['lcl_code'] = event.local_code()
-
-            if event.name():
-                query_conditions.append('name = :rgn_name')
-                injection_params['rgn_name'] = event.name()
-
-            query = 'SELECT * FROM region'
-            if query_conditions:
-                query += ' WHERE ' + ' AND '.join(query_conditions)
-
-            self._cursor.execute(query, injection_params)
-
-            while True:
-                result = self._cursor.fetchone()
-                if result is None:
-                    break
-                yield RegionSearchResultEvent(Region(result[0], result[1], result[2], result[3],
-                                                       result[4], result[5], result[6], result[7]))
+            yield from self._region_handler.start_region_search_event(event)
 
 
         if isinstance(event, LoadRegionEvent):
-            try:
-                self._cursor.execute('''SELECT *
-                                            FROM region
-                                            WHERE region_id = :id;''',
-                                     {'id': event.region_id()})
+            yield from self._region_handler.load_region_event(event)
 
-                result = self._cursor.fetchone()
-                yield RegionLoadedEvent(Region(result[0], result[1], result[2], result[3],
-                                                result[4], result[5], result[6], result[7]))
-            except sqlite3.Error:
-                yield ErrorEvent('FAILED TO LOAD REGION')
 
         if isinstance(event, SaveNewRegionEvent):
-            try:
-                rgn_id, rgn_code, lcl_code, rgn_name, con_id, cntry_id, wiki_link, kywrds = event.region()
-                kywrds = None if not kywrds or kywrds == '' else kywrds
-                wiki_link = None if not wiki_link or wiki_link == '' else wiki_link
-
-                self._cursor.execute('''INSERT INTO region (region_id, region_code, local_code, name, continent_id, country_id, wikipedia_link, keywords)
-                                            VALUES (:region_id, :region_code, :local_code, :region_name, :continent_id, :country_id, :wikipedia_link, :keywords);''',
-                                     {'region_id': rgn_id, 'region_code': rgn_code, 'local_code': lcl_code,
-                                                'region_name': rgn_name, 'continent_id': con_id, 'country_id': cntry_id, 'wikipedia_link': wiki_link, 'keywords': kywrds})
-                self._connection.commit()
-                region = Region(rgn_id, rgn_code, lcl_code, rgn_name, con_id, cntry_id, wiki_link, kywrds)
-                yield RegionSavedEvent(region)
-
-            except sqlite3.Error:
-                yield SaveRegionFailedEvent('FAILED TO SAVE NEW REGION')
+            yield from self._region_handler.save_new_region_event(event)
 
 
         if isinstance(event, SaveRegionEvent):
-            try:
-                rgn_id, rgn_code, lcl_code, rgn_name, con_id, cntry_id, wiki_link, kywrds = event.region()
-                kywrds = None if not kywrds or kywrds == '' else kywrds
-                wiki_link = None if not wiki_link or wiki_link == '' else wiki_link
-
-                self._cursor.execute('''UPDATE region
-                                            SET region_code = :rgn_code, local_code = :lcl_code, name = :rgn_name, 
-                                                continent_id = :con_id, country_id = :cntry_id, wikipedia_link = :wiki_link, keywords = :kywrds
-                                            WHERE region_id = :rgn_id;''',
-                                     {'rgn_id': rgn_id, 'rgn_code': rgn_code, 'lcl_code': lcl_code,
-                                                'rgn_name': rgn_name, 'con_id': con_id, 'cntry_id': cntry_id, 'wiki_link': wiki_link, 'kywrds': kywrds})
-                self._connection.commit()
-                region = Region(rgn_id, rgn_code, lcl_code, rgn_name, con_id, cntry_id, wiki_link, kywrds)
-                yield RegionSavedEvent(region)
-
-            except sqlite3.Error:
-                yield SaveRegionFailedEvent('FAILED TO SAVE REGION')
+            yield from self._region_handler.save_region_event(event)

@@ -75,7 +75,7 @@ class CountryHandler:
                                   'con_id': con_id, 'wiki_link': wiki_link, 'kywrds': kywrds})
             self._connection.commit_connection()
             country = Country(cntry_id, cntry_code, cntry_name, con_id, wiki_link, kywrds)
-            yield SaveCountryEvent(country)
+            yield CountrySavedEvent(country)
 
         except sqlite3.Error:
             yield SaveCountryFailedEvent('FAILED TO SAVE COUNTRY')

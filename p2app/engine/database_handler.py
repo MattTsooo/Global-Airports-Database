@@ -13,17 +13,17 @@ class DatabaseHandler:
             self._cursor = self._connection.cursor()
             self._cursor.execute('PRAGMA integrity_check')
             self._cursor.execute('PRAGMA foreign_keys = ON;')
-            return DatabaseOpenedEvent(path)
+            yield DatabaseOpenedEvent(path)
 
         except sqlite3.DatabaseError:
-            return DatabaseOpenFailedEvent('DATABASE IS INVALID')
+            yield DatabaseOpenFailedEvent('DATABASE IS INVALID')
 
 
     def close_database(self):
         if self._cursor:
             self._cursor.close()
         self._connection = None
-        return DatabaseClosedEvent()
+        yield DatabaseClosedEvent()
 
 
     def execute_queries(self, query, params = None):

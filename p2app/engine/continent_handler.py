@@ -1,6 +1,6 @@
 from p2app.events import *
 import sqlite3
-import database_handler
+
 
 class ContinentHandler:
     def __init__(self, connection):
