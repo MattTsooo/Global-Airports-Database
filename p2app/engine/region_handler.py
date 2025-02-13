@@ -2,11 +2,17 @@ from p2app.events import *
 import sqlite3
 
 class RegionHandler:
-    def __init__(self, connection):
+    def __init__(self, connection: 'DatabaseHandler'):
+        """
+        initializes connection
+        """
         self._connection = connection
 
 
     def start_region_search_event(self, event):
+        """
+        handles region querying and searches for the region
+        """
         query_conditions = []
         injection_params = {}
 
@@ -37,6 +43,10 @@ class RegionHandler:
 
 
     def load_region_event(self, event):
+        """
+        handles loading information about the current region
+        for the edit widget
+        """
         try:
             cursor = self._connection.execute_queries('''SELECT *
                                         FROM region
@@ -52,6 +62,11 @@ class RegionHandler:
 
 
     def save_new_region_event(self, event):
+        """
+        handles creating a new row for a new region to be inputted
+        wiki and keywords is None if their widgets are left blank
+        throws a failed event if a query parameter already exists
+        """
         try:
             rgn_id, rgn_code, lcl_code, rgn_name, con_id, cntry_id, wiki_link, kywrds = event.region()
             kywrds = None if not kywrds or kywrds == '' else kywrds
@@ -71,6 +86,11 @@ class RegionHandler:
 
 
     def save_region_event(self, event):
+        """
+        handles saving modifications to an already existing region
+        wiki and keywords is None if their widgets are left blank
+        throws a failed event if a query parameter already exists
+        """
         try:
             rgn_id, rgn_code, lcl_code, rgn_name, con_id, cntry_id, wiki_link, kywrds = event.region()
             kywrds = None if not kywrds or kywrds == '' else kywrds

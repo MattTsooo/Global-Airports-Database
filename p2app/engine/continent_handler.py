@@ -3,12 +3,18 @@ import sqlite3
 
 
 class ContinentHandler:
-    def __init__(self, connection):
+    def __init__(self, connection: 'DatabaseHandler'):
+        """
+        initializes connection
+        """
         self._connection = connection
 
 
 
     def start_continent_search(self, event):
+        """
+        handles continent querying and searches for the continent
+        """
         query_conditions = []
         injection_params = {}
 
@@ -34,6 +40,10 @@ class ContinentHandler:
 
 
     def load_continent_event(self, event):
+        """
+        handles loading information about the current continent
+        for the edit widget
+        """
         try:
             cursor = self._connection.execute_queries('''SELECT *
                                             FROM continent
@@ -48,6 +58,10 @@ class ContinentHandler:
 
 
     def save_new_continent_event(self, event):
+        """
+        handles creating a new row for a new continent to be inputted
+        throws a failed event if a query parameter already exists
+        """
         try:
             con_id, con_code, con_name = event.continent()
             self._connection.execute_queries('''INSERT INTO continent (continent_id, continent_code, name)
@@ -61,6 +75,10 @@ class ContinentHandler:
 
 
     def save_continent_event(self, event):
+        """
+        handles saving modifications to an already existing continent
+        throws a failed event if a query parameter already exists
+        """
         try:
             con_id, con_code, con_name = event.continent()
             self._connection.execute_queries('''UPDATE continent

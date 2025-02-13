@@ -7,7 +7,7 @@ class DatabaseHandler:
         self._cursor = None
 
 
-    def open_database(self, path):
+    def open_database(self, path: Path):
         try:
             self._connection = sqlite3.connect(path)
             self._cursor = self._connection.cursor()

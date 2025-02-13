@@ -9,8 +9,6 @@
 # which means that YOU WILL DEFINITELY NEED TO MAKE CHANGES TO THIS FILE.
 
 
-
-
 from p2app.events import *
 from p2app.engine import database_handler as dh
 from p2app.engine import continent_handler as conh
@@ -42,7 +40,9 @@ class Engine:
         # writing your engine, but this at least allows the program to run.
 
 
-        #Database events
+        """
+        database events
+        """
         if isinstance(event, OpenDatabaseEvent):
             yield from self._connection.open_database(event.path())
 
@@ -52,9 +52,9 @@ class Engine:
         if isinstance(event, QuitInitiatedEvent):
             yield from EndApplicationEvent()
 
-
-
-        #Continent events
+        """
+        continent events
+        """
         if isinstance(event, StartContinentSearchEvent):
             yield from self._continent_handler.start_continent_search(event)
 
@@ -71,8 +71,9 @@ class Engine:
             yield from self._continent_handler.save_continent_event(event)
 
 
-
-        #Country events
+        """
+        country events
+        """
         if isinstance(event, StartCountrySearchEvent):
             yield from self._country_handler.start_country_search_event(event)
 
@@ -89,8 +90,9 @@ class Engine:
             yield from self._country_handler.save_country_event(event)
 
 
-
-        #Region events
+        """
+        region events
+        """
         if isinstance(event, StartRegionSearchEvent):
             yield from self._region_handler.start_region_search_event(event)
 

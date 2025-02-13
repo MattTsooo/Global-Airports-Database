@@ -2,10 +2,16 @@ from p2app.events import *
 import sqlite3
 
 class CountryHandler:
-    def __init__(self, connection):
+    def __init__(self, connection: 'DatabaseHandler'):
+        """
+        initializes connection
+        """
         self._connection = connection
 
     def start_country_search_event(self, event):
+        """
+        handles country querying and searches for the country
+        """
         query_conditions = []
         injection_params = {}
 
@@ -32,6 +38,10 @@ class CountryHandler:
 
 
     def load_country_event(self, event):
+        """
+        handles loading information about the current country
+        for the edit widget
+        """
         try:
             cursor = self._connection.execute_queries('''SELECT *
                                         FROM country
@@ -47,6 +57,11 @@ class CountryHandler:
 
 
     def save_new_country_event(self, event):
+        """
+        handles creating a new row for a new country to be inputted
+        keywords is None if the widgets is left blank
+        throws a failed event if a query parameter already exists
+        """
         try:
             cntry_id, cntry_code, cntry_name, con_id, wiki_link, kywrds = event.country()
             kywrds = None if not kywrds or kywrds == '' else kywrds
@@ -64,6 +79,11 @@ class CountryHandler:
 
 
     def save_country_event(self, event):
+        """
+        handles saving modifications to an already existing country
+        keywords is None if the widgets is left blank
+        throws a failed event if a query parameter already exists
+        """
         try:
             cntry_id, cntry_code, cntry_name, con_id, wiki_link, kywrds = event.country()
             kywrds = None if not kywrds or kywrds == '' else kywrds
