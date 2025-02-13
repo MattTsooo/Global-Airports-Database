@@ -184,10 +184,10 @@ class Engine:
                                 {'cntry_id': cntry_id, 'cntry_code': cntry_code, 'cntry_name': cntry_name,
                                             'con_id': con_id, 'wiki_link': wiki_link, 'kywrds': kywrds})
                 self._connection.commit()
-                yield CountrySavedEvent(event.country())
+                country = Country(cntry_id, cntry_code, cntry_name, con_id, wiki_link, kywrds)
+                yield CountrySavedEvent(country)
 
             except sqlite3.Error as e:
-                print(e)
                 yield SaveCountryFailedEvent('FAILED TO SAVE NEW COUNTRY')
 
 
@@ -202,7 +202,8 @@ class Engine:
                                 {'cntry_id': cntry_id, 'cntry_code': cntry_code, 'cntry_name': cntry_name,
                                             'con_id': con_id, 'wiki_link': wiki_link, 'kywrds': kywrds})
                 self._connection.commit()
-                yield SaveCountryEvent(event.country())
+                country = Country(cntry_id, cntry_code, cntry_name, con_id, wiki_link, kywrds)
+                yield SaveCountryEvent(country)
 
             except sqlite3.Error:
                 yield SaveCountryFailedEvent('FAILED TO SAVE COUNTRY')
@@ -266,10 +267,12 @@ class Engine:
                                      {'region_id': rgn_id, 'region_code': rgn_code, 'local_code': lcl_code,
                                                 'region_name': rgn_name, 'continent_id': con_id, 'country_id': cntry_id, 'wikipedia_link': wiki_link, 'keywords': kywrds})
                 self._connection.commit()
-                yield RegionSavedEvent(event.region())
+                region = Region(rgn_id, rgn_code, lcl_code, rgn_name, con_id, cntry_id, wiki_link, kywrds)
+                yield RegionSavedEvent(region)
 
             except sqlite3.Error:
                 yield SaveRegionFailedEvent('FAILED TO SAVE NEW REGION')
+
 
         if isinstance(event, SaveRegionEvent):
             try:
@@ -284,7 +287,8 @@ class Engine:
                                      {'rgn_id': rgn_id, 'rgn_code': rgn_code, 'lcl_code': lcl_code,
                                                 'rgn_name': rgn_name, 'con_id': con_id, 'cntry_id': cntry_id, 'wiki_link': wiki_link, 'kywrds': kywrds})
                 self._connection.commit()
-                yield RegionSavedEvent(event.region())
+                region = Region(rgn_id, rgn_code, lcl_code, rgn_name, con_id, cntry_id, wiki_link, kywrds)
+                yield RegionSavedEvent(region)
 
             except sqlite3.Error:
                 yield SaveRegionFailedEvent('FAILED TO SAVE REGION')
