@@ -53,7 +53,7 @@ class ContinentHandler:
             self._connection.execute_queries('''INSERT INTO continent (continent_id, continent_code, name)
                                         VALUES (:c_id, :c_code, :name);''',
                                  {'c_id': con_id, 'c_code': con_code, 'name': con_name})
-            self._connection.commit()
+            self._connection.commit_connection()
             yield ContinentSavedEvent(event.continent())
 
         except sqlite3.Error:
@@ -67,7 +67,7 @@ class ContinentHandler:
                                     SET continent_code = :c_code, name = :name
                                     WHERE continent_id = :c_id;''',
                                  {'c_id': con_id, 'c_code': con_code, 'name': con_name})
-            self._connection.commit()
+            self._connection.commit_connection()
             yield ContinentSavedEvent(event.continent())
 
         except sqlite3.Error:

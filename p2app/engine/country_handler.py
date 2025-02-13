@@ -55,7 +55,7 @@ class CountryHandler:
                                         VALUES (:cntry_id, :cntry_code, :cntry_name, :con_id, :wiki_link, :kywrds);''',
                                  {'cntry_id': cntry_id, 'cntry_code': cntry_code, 'cntry_name': cntry_name,
                                   'con_id': con_id, 'wiki_link': wiki_link, 'kywrds': kywrds})
-            self._connection.commit()
+            self._connection.commit_connection()
             country = Country(cntry_id, cntry_code, cntry_name, con_id, wiki_link, kywrds)
             yield CountrySavedEvent(country)
 
@@ -73,7 +73,7 @@ class CountryHandler:
                                         WHERE country_id = :cntry_id;''',
                                  {'cntry_id': cntry_id, 'cntry_code': cntry_code, 'cntry_name': cntry_name,
                                   'con_id': con_id, 'wiki_link': wiki_link, 'kywrds': kywrds})
-            self._connection.commit()
+            self._connection.commit_connection()
             country = Country(cntry_id, cntry_code, cntry_name, con_id, wiki_link, kywrds)
             yield SaveCountryEvent(country)
 
