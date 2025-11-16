@@ -1,16 +1,7 @@
-# p2app/events/database.py
-#
-# ICS 33 Winter 2025
-# Project 2: Learning to Fly
-#
 # Events related to the opening and closing of the database.
-#
-# See the project write-up for details on when these events are sent and by whom.
-#
-# YOU WILL NOT NEED TO MODIFY THIS FILE AT ALL
+
 
 from pathlib import Path
-
 
 
 class OpenDatabaseEvent:

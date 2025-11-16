@@ -8,3 +8,7 @@ __pycache__
 /venv
 *.bundle
 *.coverage
+prepare_submission.py
+project2.bundle
+.DS_Store
+authors-to-keep.txt

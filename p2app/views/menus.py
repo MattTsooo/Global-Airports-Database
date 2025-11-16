@@ -1,11 +1,5 @@
-# p2app/views/menus.py
-#
-# ICS 33 Winter 2025
-# Project 2: Learning to Fly
-#
 # An implementation of the application's menus.
-#
-# YOU WILL NOT NEED TO MODIFY THIS FILE AT ALL
+
 
 import tkinter
 import tkinter.filedialog

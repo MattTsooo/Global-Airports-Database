@@ -1,11 +1,5 @@
-# project2.py
-#
-# ICS 33 Winter 2025
-# Project 2: Learning to Fly
-#
-# This is the main module that runs the entire program.
-#
-# YOU WILL NOT NEED TO MODIFY THIS FILE AT ALL
+# Main module that runs the entire program.
+
 
 from p2app import EventBus
 from p2app import Engine
@@ -18,7 +12,6 @@ def main():
     main_view = MainView(event_bus)
 
     event_bus.register_engine(engine)
-    event_bus.enable_debug_mode()
     event_bus.register_view(main_view)
 
     main_view.run()
