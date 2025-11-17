@@ -2,6 +2,7 @@
 /Scripts
 /pyvenv.cfg
 /.idea
+.noai
 __pycache__
 *.db
 *.db-journal
